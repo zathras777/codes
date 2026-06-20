@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>PIN Finder</title>
+        <link rel="stylesheet" href="/static/styles.css?v=2">
+    </head>
+    <body>
+        <main class="shell">
+            <header class="topbar">
+                <div>
+                    <h1>PIN Finder</h1>
+                    <p>Track attempts and skip anything already tried.</p>
+                </div>
+                <div class="progress-pill">
+                    <span id="percent">0.0</span>%
+                </div>
+            </header>
+
+            <section class="workspace" aria-label="Current code">
+                <div class="stats">
+                    <div>
+                        <span class="label">Tried</span>
+                        <strong id="triedCount">0</strong>
+                    </div>
+                    <div>
+                        <span class="label">Matches</span>
+                        <strong id="matchCount">0</strong>
+                    </div>
+                    <div>
+                        <span class="label">Total</span>
+                        <strong id="totalCount">0</strong>
+                    </div>
+                </div>
+
+                <label class="mode-toggle">
+                    <input id="modeToggle" type="checkbox" onchange="setMode(this.checked)">
+                    <span class="switch" aria-hidden="true"></span>
+                    <span><span id="modeText">Sequential</span> mode</span>
+                </label>
+
+                <div class="code-panel">
+                    <span class="label">Current code</span>
+                    <div id="code">0000</div>
+                </div>
+
+                <div class="actions">
+                    <button class="button secondary" onclick="mark('no')">No Match</button>
+                    <button class="button neutral" onclick="markManual()">Enter Code</button>
+                    <button class="button primary" onclick="markMatch()">Matched</button>
+                </div>
+
+                <div class="import-row">
+                    <input id="csvFile" type="file" accept=".csv,text/csv" onchange="importCsv(this.files[0])">
+                    <button class="button import" onclick="openImport()">Import CSV</button>
+                </div>
+            </section>
+
+            <section class="matches-panel" aria-label="Matches found">
+                <h2>Matches</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Menu</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matchesBody">
+                        <tr>
+                            <td class="empty" colspan="2">No matches</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+
+        <script src="/static/app.js?v=2"></script>
+    </body>
+</html>
