@@ -80,12 +80,29 @@ p {
   gap: 12px;
 }
 
-.stats > div {
+.stats > div,
+.stat-button {
   min-height: 82px;
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fafbf9;
+}
+
+.stat-button {
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stat-button:hover {
+  background: #eef7f4;
+}
+
+.stat-button:focus-visible {
+  outline: 3px solid rgba(15, 123, 108, 0.28);
+  outline-offset: 2px;
 }
 
 .label {
@@ -224,8 +241,29 @@ strong {
   background: #eef3ef;
 }
 
+.import-row {
+  display: grid;
+  gap: 12px;
+}
+
 .import-row input {
   display: none;
+}
+
+.button.sync {
+  width: 100%;
+  border-color: #a8d5cd;
+  background: #e9f8f5;
+  color: var(--accent-strong);
+}
+
+.button.sync:hover {
+  background: #d8f0eb;
+}
+
+.button.sync:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .button.import {
