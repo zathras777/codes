@@ -104,7 +104,7 @@ function show() {
   const syncButton = document.getElementById("syncPending");
   syncButton.hidden = state.pendingSync.length === 0;
   syncButton.textContent = `Sync ${state.pendingSync.length} unsynced ${
-    state.pendingSync.length === 1 ? "code" : "codes"
+    state.pendingSync.length === 1 ? "attempt" : "attempts"
   }`;
 
   renderResultsTable();
@@ -138,7 +138,7 @@ function renderMatches() {
       (match) => `
         <tr>
           <td>${escapeHtml(match.code)}</td>
-          <td>${escapeHtml(match.result)}</td>
+          <td>${escapeHtml(displayResult(match))}</td>
         </tr>
       `
     )
@@ -165,7 +165,7 @@ function renderTriedCodes() {
       (result) => `
         <tr>
           <td>${escapeHtml(result.code)}</td>
-          <td>${escapeHtml(result.result)}</td>
+          <td>${escapeHtml(displayResult(result))}</td>
         </tr>
       `
     )
@@ -175,6 +175,17 @@ function renderTriedCodes() {
 function setTableView(view) {
   state.tableView = view;
   show();
+}
+
+function displayResult(result) {
+  if (!isPendingResult(result)) return result.result;
+
+  return `${result.result} (unsynced)`;
+}
+
+function isPendingResult(result) {
+  const key = resultKey(result);
+  return state.pendingSync.some((pending) => resultKey(pending) === key);
 }
 
 function isMatch(result) {
