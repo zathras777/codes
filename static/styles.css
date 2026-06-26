@@ -329,6 +329,47 @@ tbody tr:last-child td {
   text-align: center;
 }
 
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(18, 34, 28, 0.44);
+}
+
+.dialog-overlay[hidden] {
+  display: none;
+}
+
+.dialog {
+  width: min(100%, 420px);
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.dialog p {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.dialog p strong {
+  display: inline;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: inherit;
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 @media (max-width: 560px) {
   .shell {
     width: min(100% - 20px, 760px);
@@ -337,7 +378,8 @@ tbody tr:last-child td {
 
   .topbar,
   .stats,
-  .actions {
+  .actions,
+  .dialog-actions {
     grid-template-columns: 1fr;
   }
 

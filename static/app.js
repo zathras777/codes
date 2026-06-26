@@ -54,6 +54,10 @@ function matchCount() {
   return state.results.filter(isMatch).length;
 }
 
+function findResultByCode(code) {
+  return state.results.find((result) => result.code === code) || null;
+}
+
 function normalizeCode(code) {
   const digits = String(code || "").replace(/\D/g, "");
   if (!digits) return "";
@@ -126,7 +130,10 @@ function renderMatches() {
   document.getElementById("resultHeader").textContent = "Menu";
 
   const body = document.getElementById("matchesBody");
-  const matches = state.results.filter(isMatch);
+  const matches = state.results
+    .filter(isMatch)
+    .slice()
+    .sort((a, b) => Number(a.code) - Number(b.code));
 
   if (!matches.length) {
     body.innerHTML = '<tr><td class="empty" colspan="2">No matches</td></tr>';
@@ -146,17 +153,16 @@ function renderMatches() {
 }
 
 function renderTriedCodes() {
-  document.getElementById("resultsTitle").textContent = "Tried - No Match";
+  document.getElementById("resultsTitle").textContent = "Tried Codes";
   document.getElementById("resultHeader").textContent = "Result";
 
   const body = document.getElementById("matchesBody");
   const tried = state.results
-    .filter((result) => !isMatch(result))
     .slice()
     .sort((a, b) => Number(a.code) - Number(b.code));
 
   if (!tried.length) {
-    body.innerHTML = '<tr><td class="empty" colspan="2">No tried codes without matches</td></tr>';
+    body.innerHTML = '<tr><td class="empty" colspan="2">No tried codes</td></tr>';
     return;
   }
 
@@ -184,8 +190,7 @@ function displayResult(result) {
 }
 
 function isPendingResult(result) {
-  const key = resultKey(result);
-  return state.pendingSync.some((pending) => resultKey(pending) === key);
+  return state.pendingSync.some((pending) => pending.code === result.code);
 }
 
 function isMatch(result) {
@@ -243,7 +248,7 @@ function reconcileRemoteResults(remoteResults) {
   });
 
   state.results = mergeResults(remoteResults, localOnly);
-  state.pendingSync = uniqueResults(localOnly);
+  state.pendingSync = uniqueResultsByCode(localOnly);
 }
 
 function countResults(results) {
@@ -258,7 +263,17 @@ function countResults(results) {
 }
 
 function mergeResults(...groups) {
-  return uniqueResults(groups.flat());
+  return uniqueResultsByCode(groups.flat());
+}
+
+function uniqueResultsByCode(results) {
+  const byCode = new Map();
+
+  results.forEach((result) => {
+    byCode.set(result.code, result);
+  });
+
+  return Array.from(byCode.values());
 }
 
 function uniqueResults(results) {
@@ -280,8 +295,18 @@ function resultSyncKey(result) {
   return `${result.code}\u0000${result.result}`;
 }
 
-async function mark(result, code = state.currentCode) {
+function upsertResult(result) {
+  state.results = state.results.filter((item) => item.code !== result.code);
+  state.results.push(result);
+  state.pendingSync = state.pendingSync.filter(
+    (item) => item.code !== result.code
+  );
+}
+
+async function mark(result, code = state.currentCode, options = {}) {
   if (!code) return;
+
+  const updateCurrentCode = options.updateCurrentCode !== false;
 
   const menu = result || "no";
 
@@ -291,7 +316,7 @@ async function mark(result, code = state.currentCode) {
     time: new Date().toISOString(),
   };
 
-  state.results.push(attempt);
+  upsertResult(attempt);
 
   localStorage.pinTester = JSON.stringify(state);
 
@@ -303,11 +328,17 @@ async function mark(result, code = state.currentCode) {
     alert("Saved locally, but server submit failed");
   }
 
-  if (state.mode === "sequential" && code === state.currentCode) {
+  if (
+    updateCurrentCode &&
+    state.mode === "sequential" &&
+    code === state.currentCode
+  ) {
     state.index++;
   }
 
-  selectNextCode();
+  if (updateCurrentCode) {
+    selectNextCode();
+  }
   show();
 }
 
@@ -350,16 +381,97 @@ async function markManual() {
   const code = normalizeCode(prompt("Code?"));
   if (!code) return;
 
-  const matched = confirm("Did this code match?");
+  const existing = findResultByCode(code);
+  if (existing) {
+    const shouldChange = await askExistingCodeChange(existing);
+    if (!shouldChange) return;
+  }
+
+  const matched = await askManualMatch(code);
+  if (matched === null) return;
+
   if (!matched) {
-    await mark("no", code);
+    await mark("no", code, { updateCurrentCode: false });
     return;
   }
 
   const menu = prompt("Menu name?");
   if (menu === null) return;
 
-  await mark(menu || "yes", code);
+  await mark(menu || "yes", code, { updateCurrentCode: false });
+}
+
+function askExistingCodeChange(result) {
+  return askManualDialog({
+    title: "Code already recorded",
+    message: `${result.code} is recorded as ${displayResult(result)}.`,
+    yesLabel: "Change",
+    noLabel: "Keep",
+    cancelLabel: "Cancel",
+  });
+}
+
+function askManualMatch(code) {
+  return askManualDialog({
+    title: "Manual code",
+    message: `Did ${code} match?`,
+    yesLabel: "Yes",
+    noLabel: "No",
+    cancelLabel: "Cancel",
+  });
+}
+
+function askManualDialog({ title, message, yesLabel, noLabel, cancelLabel }) {
+  const dialog = document.getElementById("manualMatchDialog");
+  const titleElement = document.getElementById("manualDialogTitle");
+  const messageElement = document.getElementById("manualDialogMessage");
+
+  titleElement.textContent = title;
+  messageElement.textContent = message;
+  dialog.hidden = false;
+
+  return new Promise((resolve) => {
+    const yesButton = document.getElementById("manualMatchYes");
+    const noButton = document.getElementById("manualMatchNo");
+    const cancelButton = document.getElementById("manualMatchCancel");
+
+    yesButton.textContent = yesLabel;
+    noButton.textContent = noLabel;
+    cancelButton.textContent = cancelLabel;
+
+    function done(value) {
+      dialog.hidden = true;
+      yesButton.removeEventListener("click", yes);
+      noButton.removeEventListener("click", no);
+      cancelButton.removeEventListener("click", cancel);
+      document.removeEventListener("keydown", onKeydown);
+      resolve(value);
+    }
+
+    function yes() {
+      done(true);
+    }
+
+    function no() {
+      done(false);
+    }
+
+    function cancel() {
+      done(null);
+    }
+
+    function onKeydown(event) {
+      if (event.key === "Escape") {
+        done(null);
+      }
+    }
+
+    yesButton.addEventListener("click", yes);
+    noButton.addEventListener("click", no);
+    cancelButton.addEventListener("click", cancel);
+    document.addEventListener("keydown", onKeydown);
+    yesButton.focus();
+  });
 }
 
 function setMode(random) {
@@ -390,7 +502,7 @@ async function importCsv(file) {
     }
 
     await saveImport(imported);
-    state.results.push(...imported);
+    imported.forEach(upsertResult);
     selectNextCode();
     show();
     alert(`Imported ${imported.length} rows.`);

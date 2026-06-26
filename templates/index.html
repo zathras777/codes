@@ -4,7 +4,8 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>PIN Finder</title>
-        <link rel="stylesheet" href="/static/styles.css?v=5" />
+        <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+        <link rel="stylesheet" href="/static/styles.css?v=9" />
     </head>
     <body>
         <main class="shell">
@@ -97,6 +98,41 @@
             </section>
         </main>
 
-        <script src="/static/app.js?v=5"></script>
+        <div id="manualMatchDialog" class="dialog-overlay" hidden>
+            <div
+                class="dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="manualDialogTitle"
+            >
+                <h2 id="manualDialogTitle">Manual code</h2>
+                <p id="manualDialogMessage">Did 0000 match?</p>
+                <div class="dialog-actions">
+                    <button
+                        id="manualMatchNo"
+                        class="button secondary"
+                        type="button"
+                    >
+                        No
+                    </button>
+                    <button
+                        id="manualMatchCancel"
+                        class="button neutral"
+                        type="button"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        id="manualMatchYes"
+                        class="button primary"
+                        type="button"
+                    >
+                        Yes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/app.js?v=9"></script>
     </body>
 </html>

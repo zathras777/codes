@@ -33,6 +33,10 @@ def write_codes(codes):
         f.write("\n")
 
 
+def upsert_code(codes, code):
+    return [item for item in codes if item.get("code") != code["code"]] + [code]
+
+
 @app.get("/")
 def index(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
@@ -46,7 +50,7 @@ def get_codes():
 @app.post("/codes")
 def add_code(code: Code):
     data = read_codes()
-    data.append(code.model_dump())
+    data = upsert_code(data, code.model_dump())
     write_codes(data)
     return {"ok": True}
 
@@ -55,7 +59,8 @@ def add_code(code: Code):
 def import_codes(codes: List[Code]):
     data = read_codes()
     imported = [code.model_dump() for code in codes]
-    data.extend(imported)
+    for code in imported:
+        data = upsert_code(data, code)
     write_codes(data)
     return {"ok": True, "imported": len(imported)}
 
