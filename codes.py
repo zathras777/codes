@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 from pathlib import Path
 from typing import List
 
@@ -12,6 +13,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 DATA_FILE = Path("tried.json")
+LOGGER = logging.getLogger("uvicorn.error")
 
 
 class Code(BaseModel):
@@ -37,6 +39,29 @@ def upsert_code(codes, code):
     return [item for item in codes if item.get("code") != code["code"]] + [code]
 
 
+@app.middleware("http")
+async def log_request_errors(request: Request, call_next):
+    try:
+        response = await call_next(request)
+    except Exception:
+        LOGGER.exception(
+            'Request failed: %s %s',
+            request.method,
+            request.url.path,
+        )
+        raise
+
+    if response.status_code >= 400:
+        LOGGER.warning(
+            'Request returned %s: %s %s',
+            response.status_code,
+            request.method,
+            request.url.path,
+        )
+
+    return response
+
+
 @app.get("/")
 def index(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
@@ -49,8 +74,14 @@ def get_codes():
 
 @app.post("/codes")
 def add_code(code: Code):
+    submitted = code.model_dump()
+    LOGGER.info(
+        "Code submitted: code=%s result=%r",
+        submitted["code"],
+        submitted["result"],
+    )
     data = read_codes()
-    data = upsert_code(data, code.model_dump())
+    data = upsert_code(data, submitted)
     write_codes(data)
     return {"ok": True}
 
@@ -59,7 +90,13 @@ def add_code(code: Code):
 def import_codes(codes: List[Code]):
     data = read_codes()
     imported = [code.model_dump() for code in codes]
+    LOGGER.info("Import submitted: count=%s", len(imported))
     for code in imported:
+        LOGGER.info(
+            "Code imported: code=%s result=%r",
+            code["code"],
+            code["result"],
+        )
         data = upsert_code(data, code)
     write_codes(data)
     return {"ok": True, "imported": len(imported)}
@@ -85,7 +122,13 @@ def main():
     )
     args = parser.parse_args()
 
-    uvicorn.run("codes:app", host=args.host, port=args.port, reload=False)
+    uvicorn.run(
+        "codes:app",
+        host=args.host,
+        port=args.port,
+        reload=False,
+        access_log=False,
+    )
 
 
 if __name__ == "__main__":
